@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简语 EasyLang - 写中文就能编程</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #f5f5f5; color: #333; line-height: 1.6;
+        }
+        .header {
+            background: #fff; padding: 20px 40px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .header h1 { font-size: 24px; color: #1a73e8; }
+        .header p { font-size: 14px; color: #888; }
+        .container { display: flex; height: calc(100vh - 80px); }
+        .panel { flex: 1; padding: 20px; display: flex; flex-direction: column; }
+        .panel-title {
+            font-size: 16px; font-weight: bold; margin-bottom: 10px;
+            color: #555;
+        }
+        textarea {
+            width: 100%; height: 100%; border: 1px solid #ddd; border-radius: 8px;
+            padding: 16px; font-size: 15px; font-family: "PingFang SC", "Microsoft YaHei", monospace;
+            resize: none; outline: none; line-height: 1.8;
+        }
+        textarea:focus { border-color: #1a73e8; }
+        .output-box {
+            width: 100%; height: 100%; border: 1px solid #ddd; border-radius: 8px;
+            padding: 16px; font-size: 15px; font-family: "PingFang SC", "Microsoft YaHei", monospace;
+            background: #fafafa; overflow-y: auto; white-space: pre-wrap;
+        }
+        .run-btn {
+            display: block; width: 100%; padding: 12px; background: #1a73e8;
+            color: #fff; border: none; border-radius: 8px; font-size: 16px;
+            cursor: pointer; margin-top: 12px; font-weight: bold;
+        }
+        .run-btn:hover { background: #1557b0; }
+        .examples { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+        .example-btn {
+            background: #e8f0fe; color: #1a73e8; border: none; padding: 6px 14px;
+            border-radius: 20px; cursor: pointer; font-size: 13px;
+        }
+        .example-btn:hover { background: #d2e3fc; }
+        .error { color: #d93025; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div>
+        <h1>简语 EasyLang</h1>
+        <p>写中文就能编程 · 5分钟看懂</p>
+    </div>
+</div>
+
+<div class="container">
+    <!-- 左边：输入区 -->
+    <div class="panel">
+        <div class="panel-title">?? 简语代码</div>
+        <div class="examples" id="exampleBtns">
+            <button class="example-btn" onclick="loadExample('bmi')">BMI计算器</button>
+            <button class="example-btn" onclick="loadExample('rollcall')">随机点名</button>
+            <button class="example-btn" onclick="loadExample('password')">密码门</button>
+            <button class="example-btn" onclick="loadExample('countdown')">倒计时器</button>
+            <button class="example-btn" onclick="loadExample('weather')">穿衣建议</button>
+            <button class="example-btn" onclick="loadExample('change')">找零计算</button>
+            <button class="example-btn" onclick="loadExample('lottery')">抽奖转盘</button>
+            <button class="example-btn" onclick="loadExample('homework')">作业提醒</button>
+        </div>
+        <textarea id="jianCode" placeholder="在这里写简语代码...">问 "你叫什么名字？"，得到 [名字]
+说 "你好，" + [名字] + "！欢迎来到简语。"</textarea>
+        <button class="run-btn" onclick="runCode()">? 运行</button>
+    </div>
+    <!-- 右边：输出区 -->
+    <div class="panel">
+        <div class="panel-title">?? 运行结果</div>
+        <div class="output-box" id="output"></div>
+    </div>
+</div>
+
+<script>
+// 简语 → Python 转译器（JavaScript版）
+function translate(jianCode) {
+    let lines = jianCode.split('\n');
+    let pyLines = ['import random', 'import time', ''];
+    let indent = 0;
+
+    for (let rawLine of lines) {
+        let line = rawLine.trimEnd();
+        if (!line.trim()) { pyLines.push(''); continue; }
+
+        let stripped = line.trim();
+        let currentIndent = '    '.repeat(indent);
+
+        // 注释
+        if (stripped.startsWith('注：') || stripped.startsWith('注:')) {
+            let comment = stripped.replace(/^注[：:]/, '').trim();
+            pyLines.push(currentIndent + '# ' + comment);
+            continue;
+        }
+
+        // 当 ... 时，一直： 或 当 ... 时，提示：
+        if (stripped.startsWith('当 ') && (stripped.includes('时，一直') || stripped.includes('时，提示'))) {
+            let cond = stripped.substring(2).split(/时，一直|时，提示/)[0].trim();
+            cond = cond.replace(/\[(.*?)\]/g, '$1');
+            pyLines.push(currentIndent + 'while ' + cond + ':');
+            indent++;
+            continue;
+        }
+
+        // 重复 N 次：
+        if (stripped.startsWith('重复 ') && stripped.endsWith('次：')) {
+            let num = stripped.substring(3).split('次')[0].trim();
+            pyLines.push(currentIndent + 'for _ in range(' + num + '):');
+            indent++;
+            continue;
+        }
+
+        // 如果 ... ：
+        if (stripped.startsWith('如果 ')) {
+            let cond = stripped.substring(3).replace(/：$/, '').trim();
+            cond = cond.replace(/\[(.*?)\]/g, '$1');
+            pyLines.push(currentIndent + 'if ' + cond + ':');
+            indent++;
+            continue;
+        }
+
+        // 再如果 ... ：
+        if (stripped.startsWith('再如果 ')) {
+            let cond = stripped.substring(4).replace(/：$/, '').trim();
+            cond = cond.replace(/\[(.*?)\]/g, '$1');
+            pyLines.push('    '.repeat(indent - 1) + 'elif ' + cond + ':');
+            continue;
+        }
+
+        // 都不是：
+        if (stripped === '都不是：' || stripped === '都不是') {
+            pyLines.push('    '.repeat(indent - 1) + 'else:');
+            continue;
+        }
+
+        // 说 ...
+        if (stripped.startsWith('说 ')) {
+            let content = stripped.substring(2).trim();
+            content = content.replace(/\[(.*?)\]/g, '$1');
+            pyLines.push(currentIndent + 'print(' + content + ')');
+            continue;
+        }
+
+        // 问 ... ，得到 [变量]
+        let askMatch = stripped.match(/^问\s*[""](.*?)[""]\s*[，,]\s*得到\s*\[(.*?)\]$/);
+        if (askMatch) {
+            let prompt = askMatch[1];
+            let varName = askMatch[2];
+            pyLines.push(currentIndent + varName + ' = input("' + prompt + '")');
+            continue;
+        }
+
+        // 设定 [变量] 为 ...
+        let setMatch = stripped.match(/^设定\s*\[(.*?)\]\s*为\s*(.+)$/);
+        if (setMatch) {
+            let varName = setMatch[1];
+            let expr = setMatch[2].trim();
+            expr = expr.replace(/\[(.*?)\]/g, '$1');
+            pyLines.push(currentIndent + varName + ' = ' + expr);
+            continue;
+        }
+
+        // 从 [列表] 里随机选一个，得到 [变量]
+        let randMatch = stripped.match(/^从\s*\[(.*?)\]\s*里随机选一个[，,]\s*得到\s*\[(.*?)\]$/);
+        if (randMatch) {
+            let listVar = randMatch[1];
+            let target = randMatch[2];
+            pyLines.push(currentIndent + target + ' = random.choice(' + listVar + ')');
+            continue;
+        }
+
+        // 等 N 秒
+        if (stripped.startsWith('等 ') && stripped.endsWith('秒')) {
+            let secs = stripped.substring(2, stripped.length - 1).trim();
+            pyLines.push(currentIndent + 'time.sleep(' + secs + ')');
+            continue;
+        }
+
+        // 结束
+        if (stripped === '结束') {
+            pyLines.push(currentIndent + 'break');
+            continue;
+        }
+    }
+
+    return pyLines.join('\n');
+}
+
+// 示例库
+const examples = {
+    bmi: `问 "你的身高是多少米？"，得到 [身高]
+问 "你的体重是多少公斤？"，得到 [体重]
+设定 [bmi] 为 [体重] / ([身高] * [身高])
+说 "你的 BMI 指数是：" + [bmi]
+如果 [bmi] < 18.5：
+    说 "体重过轻，多吃点好东西吧。"
+再如果 [bmi] < 24：
+    说 "体重正常，保持得不错！"
+再如果 [bmi] < 28：
+    说 "有点偏重了，注意饮食哦。"
+都不是：
+    说 "属于肥胖范围，建议咨询医生。"`,
+    rollcall: `设定 [名单] 为 "小明, 小红, 小刚, 小丽, 小军"
+从 [名单] 里随机选一个，得到 [被点名的人]
+说 "恭喜 " + [被点名的人] + " 被选中了！"`,
+    password: `设定 [正确密码] 为 "1234"
+问 "请输入密码（输入时不可见）："，得到 [输入]
+当 [输入] ≠ [正确密码] 时，提示：
+    说 "密码错误，请重试。"
+    问 "再试一次（输入时不可见）："，得到 [输入]
+说 "验证通过，门已开启。"`,
+    countdown: `设定 [秒数] 为 10
+当 [秒数] > 0 时，一直：
+    说 "还剩 " + [秒数] + " 秒"
+    等 1 秒
+    设定 [秒数] 为 [秒数] - 1
+说 "时间到！"`,
+    weather: `问 "今天气温多少度？"，得到 [温度]
+如果 [温度] < 10：
+    说 "太冷了，穿羽绒服吧。"
+再如果 [温度] < 20：
+    说 "有点凉，穿件外套。"
+再如果 [温度] < 28：
+    说 "天气舒适，穿长袖或薄衫就好。"
+都不是：
+    说 "热了，短袖走起！"`,
+    change: `问 "商品总价是多少？"，得到 [总价]
+问 "你给了多少钱？"，得到 [付款]
+如果 [付款] < [总价]：
+    说 "钱不够，还差 " + ([总价] - [付款]) + " 元。"
+再如果 [付款] = [总价]：
+    说 "刚好，不用找零。"
+都不是：
+    设定 [找零] 为 [付款] - [总价]
+    说 "应找 " + [找零] + " 元。"
+    如果 [找零] >= 50：
+        说 "找零金额较大，请核对。"`,
+    lottery: `设定 [奖品池] 为 "手机, 耳机, 谢谢参与, 优惠券, 平板"
+从 [奖品池] 里随机选一个，得到 [奖品]
+说 "恭喜你抽中了：" + [奖品]
+如果 [奖品] = "谢谢参与"：
+    说 "别灰心，再试一次吧！"
+都不是：
+    说 "请到服务台领取奖品。"`,
+    homework: `问 "明天星期几？"，得到 [星期]
+如果 [星期] = "六"：
+    说 "明天是周六，可以睡懒觉！"
+再如果 [星期] = "日"：
+    说 "明天是周日，检查作业做完了吗？"
+都不是：
+    说 "明天要上学，今晚早点睡，定好闹钟。"`
+};
+
+function loadExample(name) {
+    document.getElementById('jianCode').value = examples[name];
+}
+
+function runCode() {
+    let jianCode = document.getElementById('jianCode').value;
+    let outputDiv = document.getElementById('output');
+    outputDiv.innerHTML = '';
+
+    try {
+        let pyCode = translate(jianCode);
+        outputDiv.innerHTML = '--- 生成 Python 代码 ---\n' + pyCode + '\n\n--- 注意 ---\n当前为静态翻译预览。输入/输出类程序建议使用 Python 本地运行。';
+    } catch (e) {
+        outputDiv.innerHTML = '<span class="error">翻译出错：' + e.message + '</span>';
+    }
+}
+</script>
+</body>
+</html>
