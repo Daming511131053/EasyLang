@@ -204,15 +204,15 @@ let pyodideReady = false;
 
 async function initPyodide() {
     if (pyodideReady) return;
-    
+
     let outputDiv = document.getElementById('output');
     outputDiv.innerHTML = '<span class="loading">正在加载 Python 运行环境（首次约需10秒，之后无需等待）...</span>';
-    
+
     try {
         let script = document.createElement('script');
         script.src = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js';
         document.head.appendChild(script);
-        
+
         await new Promise((resolve) => { script.onload = resolve; });
         pyodide = await loadPyodide();
         pyodideReady = true;
@@ -229,38 +229,45 @@ async function runCode() {
     let runBtn = document.getElementById('runBtn');
     let jianCode = document.getElementById('jianCode').value;
 
-    // 先初始化 Pyodide
     if (!pyodideReady) {
         await initPyodide();
         if (!pyodideReady) return;
     }
 
-    // 翻译简语 → Python
     let pyCode = translate(jianCode);
-    
-    // 显示翻译结果
+
     outputDiv.innerHTML = '<span class="output-label">--- 生成的 Python 代码 ---</span>\n' + pyCode + '\n\n';
     outputDiv.innerHTML += '<span class="output-label">--- 运行结果 ---</span>\n';
-    
+
+    // --- 核心：通过回调捕获输出，不破坏内部I/O流 ---
+    let stdoutText = "";
+
+    function stdoutCallback(text) {
+        stdoutText += text + "\n";
+    }
+
+    function stdinCallback() {
+        return window.prompt() || "";
+    }
+
     try {
-        // 重定向 stdout
-        pyodide.runPython(`
-import sys
-from io import StringIO
-sys.stdout = StringIO()
-        `);
-        
-        // 执行代码
+        // 设置自定义标准输出
+        pyodide.setStdout({ batched: stdoutCallback });
+        // 设置自定义标准输入
+        pyodide.setStdin({ stdin: stdinCallback });
+
         await pyodide.runPythonAsync(pyCode);
-        
-        // 获取输出
-        let result = pyodide.runPython('sys.stdout.getvalue()');
-        
-        // 恢复 stdout
-        pyodide.runPython('sys.stdout = sys.__stdout__');
-        
-        outputDiv.innerHTML += result || '（程序运行完毕，无输出内容）';
+
+        // 恢复默认设置
+        pyodide.setStdout();
+        pyodide.setStderr();
+
+        outputDiv.innerHTML += stdoutText || '（程序运行完毕，无输出内容）';
     } catch (e) {
+        // 出错时也恢复默认
+        pyodide.setStdout();
+        pyodide.setStderr();
+
         outputDiv.innerHTML += '<span class="error">\n运行出错：' + e.message + '</span>';
     } finally {
         runBtn.disabled = false;
