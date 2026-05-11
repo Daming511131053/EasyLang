@@ -3,280 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>简语 EasyLang - 写中文就能编程</title>
+    <title>简语 IDE</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-            background: #f5f5f5; color: #333; line-height: 1.6;
-        }
-        .header {
-            background: #fff; padding: 20px 40px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-            display: flex; align-items: center; justify-content: space-between;
-        }
-        .header h1 { font-size: 24px; color: #1a73e8; }
-        .header p { font-size: 14px; color: #888; }
-        .container { display: flex; height: calc(100vh - 80px); }
-        .panel { flex: 1; padding: 20px; display: flex; flex-direction: column; }
-        .panel-title {
-            font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #555;
-        }
-        textarea {
-            width: 100%; height: 100%; border: 1px solid #ddd; border-radius: 8px;
-            padding: 16px; font-size: 15px; font-family: "PingFang SC", "Microsoft YaHei", monospace;
-            resize: none; outline: none; line-height: 1.8;
-        }
-        textarea:focus { border-color: #1a73e8; }
-        .output-box {
-            width: 100%; height: 100%; border: 1px solid #ddd; border-radius: 8px;
-            padding: 16px; font-size: 15px; font-family: "PingFang SC", "Microsoft YaHei", monospace;
-            background: #fafafa; overflow-y: auto; white-space: pre-wrap;
-        }
-        .run-btn {
-            display: block; width: 100%; padding: 12px; background: #1a73e8;
-            color: #fff; border: none; border-radius: 8px; font-size: 16px;
-            cursor: pointer; margin-top: 12px; font-weight: bold;
-        }
-        .run-btn:hover { background: #1557b0; }
-        .run-btn:disabled { background: #aaa; cursor: not-allowed; }
-        .examples { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
-        .example-btn {
-            background: #e8f0fe; color: #1a73e8; border: none; padding: 6px 14px;
-            border-radius: 20px; cursor: pointer; font-size: 13px;
-        }
-        .example-btn:hover { background: #d2e3fc; }
-        .error { color: #d93025; }
-        .loading { color: #1a73e8; font-weight: bold; }
-        .output-label { color: #1a73e8; font-weight: bold; }
+        body { font-family: 'Microsoft YaHei', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; flex-direction: column; }
+        header { background: white; padding: 12px 20px; }
+        h1 { color: #667eea; font-size: 22px; }
+        .main-container { flex: 1; display: flex; padding: 15px; gap: 15px; }
+        .editor-section, .result-section { flex: 1; display: flex; flex-direction: column; background: white; border-radius: 12px; overflow: hidden; }
+        .section-title { background: linear-gradient(90deg, #667eea, #764ba2); color: white; padding: 10px 16px; font-size: 14px; }
+        textarea { flex: 1; border: none; resize: none; padding: 15px; font-size: 14px; font-family: monospace; outline: none; background: #fafafa; }
+        .debug-box { margin: 10px; padding: 10px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; max-height: 150px; overflow: auto; white-space: pre-wrap; }
+        .examples-bar { background: #f5f5f5; padding: 10px; display: flex; gap: 6px; flex-wrap: wrap; border-top: 1px solid #eee; }
+        .example-btn { padding: 5px 12px; background: white; border: 2px solid #ddd; border-radius: 15px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+        .example-btn:hover { background: #667eea; color: white; border-color: #667eea; }
+        .example-btn.active { background: #667eea; color: white; border-color: #667eea; }
+        .btn-run { margin: 10px; padding: 10px; background: linear-gradient(90deg, #667eea, #764ba2); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; transition: opacity 0.2s; }
+        .btn-run:hover { opacity: 0.9; }
+        .btn-run:disabled { opacity: 0.6; cursor: not-allowed; }
+        .loading-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .result-content { flex: 1; padding: 15px; overflow-y: auto; background: #fafafa; }
+        .result-item { margin-bottom: 8px; padding: 8px 12px; background: white; border-left: 3px solid #667eea; border-radius: 0 4px 4px 0; font-family: monospace; font-size: 13px; white-space: pre-wrap; }
+        .result-error { background: #fff5f5; border-left-color: #e53e3e; color: #c53030; }
+        .result-welcome { color: #888; text-align: center; padding-top: 50px; }
+        .context-menu { position: fixed; background: white; border: 1px solid #ddd; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; min-width: 120px; display: none; }
+        .context-menu-item { padding: 8px 16px; cursor: pointer; font-size: 13px; }
+        .context-menu-item:hover { background: #f5f5f5; }
+        @media (max-width: 768px) { .main-container { flex-direction: column; } }
     </style>
 </head>
 <body>
+    <header>
+        <h1>简语 IDE</h1>
+    </header>
 
-<div class="header">
-    <div>
-        <h1>简语 EasyLang</h1>
-        <p>写中文就能编程 · 5分钟看懂 · 浏览器里直接跑</p>
-    </div>
-</div>
-
-<div class="container">
-    <!-- 左边：输入区 -->
-    <div class="panel">
-        <div class="panel-title">📝 简语代码</div>
-        <div class="examples" id="exampleBtns">
-            <button class="example-btn" onclick="loadExample('bmi')">BMI计算器</button>
-            <button class="example-btn" onclick="loadExample('rollcall')">随机点名</button>
-            <button class="example-btn" onclick="loadExample('password')">密码门</button>
-            <button class="example-btn" onclick="loadExample('countdown')">倒计时器</button>
-            <button class="example-btn" onclick="loadExample('weather')">穿衣建议</button>
-            <button class="example-btn" onclick="loadExample('change')">找零计算</button>
-            <button class="example-btn" onclick="loadExample('lottery')">抽奖转盘</button>
-            <button class="example-btn" onclick="loadExample('homework')">作业提醒</button>
+    <div class="main-container">
+        <div class="editor-section">
+            <div class="section-title">📝 代码输入</div>
+            <textarea id="codeInput" placeholder="在这里输入简语代码..."></textarea>
+            <div class="examples-bar">
+                <button class="example-btn" onclick="loadExample(0)">BMI计算器</button>
+                <button class="example-btn" onclick="loadExample(1)">随机点名</button>
+                <button class="example-btn" onclick="loadExample(2)">密码门</button>
+                <button class="example-btn" onclick="loadExample(3)">倒计时器</button>
+                <button class="example-btn" onclick="loadExample(4)">穿衣建议</button>
+                <button class="example-btn" onclick="loadExample(5)">找零计算器</button>
+                <button class="example-btn" onclick="loadExample(6)">抽奖转盘</button>
+                <button class="example-btn" onclick="loadExample(7)">作业提醒</button>
+            </div>
+            <button class="btn-run" id="runBtn" onclick="runCode()">▶ 运行代码</button>
         </div>
-        <textarea id="jianCode" placeholder="在这里写简语代码...">问 "你叫什么名字？", 得到 [名字]
-说 "你好, " + [名字] + "！欢迎来到简语。"</textarea>
-        <button class="run-btn" id="runBtn" onclick="runCode()">▶ 运行</button>
+        <div class="result-section">
+            <div class="section-title">📋 运行结果</div>
+            <div id="debugBox" class="debug-box" style="display:none;"></div>
+            <div id="resultArea" class="result-content">
+                <div class="result-welcome">点击运行代码查看结果</div>
+            </div>
+        </div>
     </div>
-    <!-- 右边：输出区 -->
-    <div class="panel">
-        <div class="panel-title">📤 运行结果</div>
-        <div class="output-box" id="output"></div>
+
+    <footer style="text-align: center; padding: 12px; color: rgba(255,255,255,0.7); font-size: 13px;">
+        简语 V1.0 · 写中文就能编程
+    </footer>
+
+    <div id="contextMenu" class="context-menu">
+        <div class="context-menu-item" onclick="copyResultItem()">复制此项</div>
+        <div class="context-menu-item" onclick="clearResults()">清空结果区</div>
     </div>
-</div>
 
-<script>
-// ========== 简语 → Python 转译器 ==========
-function translate(jianCode) {
-    let lines = jianCode.split('\n');
-    let pyLines = [];
-    let indent = 0;
-
-    for (let rawLine of lines) {
-        let line = rawLine.trimEnd();
-        if (!line.trim()) { pyLines.push(''); continue; }
-
-        let stripped = line.trim();
-        let currentIndent = '    '.repeat(indent);
-
-        // 注释
-        if (stripped.startsWith('注：') || stripped.startsWith('注:')) {
-            let comment = stripped.replace(/^注[：:]/, '').trim();
-            pyLines.push(currentIndent + '# ' + comment);
-            continue;
-        }
-
-        // 当 ... 时，一直： / 当 ... 时，提示：
-        if (stripped.startsWith('当 ') && (stripped.includes('时，一直') || stripped.includes('时，提示'))) {
-            let cond = stripped.substring(2).split(/时，一直|时，提示/)[0].trim();
-            cond = cond.replace(/\[(.*?)\]/g, '$1');
-            pyLines.push(currentIndent + 'while ' + cond + ':');
-            indent++;
-            continue;
-        }
-
-        // 重复 N 次：
-        if (stripped.startsWith('重复 ') && stripped.endsWith('次：')) {
-            let num = stripped.substring(3).split('次')[0].trim();
-            pyLines.push(currentIndent + 'for _ in range(' + num + '):');
-            indent++;
-            continue;
-        }
-
-        // 如果 ... ：
-        if (stripped.startsWith('如果 ')) {
-            let cond = stripped.substring(3).replace(/：$/, '').trim();
-            cond = cond.replace(/\[(.*?)\]/g, '$1');
-            pyLines.push(currentIndent + 'if ' + cond + ':');
-            indent++;
-            continue;
-        }
-
-        // 再如果 ... ：
-        if (stripped.startsWith('再如果 ')) {
-            let cond = stripped.substring(4).replace(/：$/, '').trim();
-            cond = cond.replace(/\[(.*?)\]/g, '$1');
-            pyLines.push('    '.repeat(indent - 1) + 'elif ' + cond + ':');
-            continue;
-        }
-
-        // 都不是：
-        if (stripped === '都不是：' || stripped === '都不是') {
-            pyLines.push('    '.repeat(indent - 1) + 'else:');
-            continue;
-        }
-
-        // 说 ...
-        if (stripped.startsWith('说 ')) {
-            let content = stripped.substring(2).trim();
-            content = content.replace(/\[(.*?)\]/g, '$1');
-            pyLines.push(currentIndent + 'print(' + content + ')');
-            continue;
-        }
-
-        // 问 ... ，得到 [变量]
-        let askMatch = stripped.match(/^问\s*"(.*?)"\s*[,，]\s*得到\s*\[(.*?)\]$/);
-        if (askMatch) {
-            let prompt = askMatch[1];
-            let varName = askMatch[2];
-            pyLines.push(currentIndent + varName + ' = input("' + prompt + '")');
-            continue;
-        }
-
-        // 设定 [变量] 为 ...
-        let setMatch = stripped.match(/^设定\s*\[(.*?)\]\s*为\s*(.+)$/);
-        if (setMatch) {
-            let varName = setMatch[1];
-            let expr = setMatch[2].trim();
-            expr = expr.replace(/\[(.*?)\]/g, '$1');
-            pyLines.push(currentIndent + varName + ' = ' + expr);
-            continue;
-        }
-
-        // 从 [列表] 里随机选一个，得到 [变量]
-        let randMatch = stripped.match(/^从\s*\[(.*?)\]\s*里随机选一个[，,]\s*得到\s*\[(.*?)\]$/);
-        if (randMatch) {
-            let listVar = randMatch[1];
-            let target = randMatch[2];
-            pyLines.push(currentIndent + target + ' = random.choice(' + listVar + ')');
-            continue;
-        }
-
-        // 等 N 秒
-        if (stripped.startsWith('等 ') && stripped.endsWith('秒')) {
-            let secs = stripped.substring(2, stripped.length - 1).trim();
-            pyLines.push(currentIndent + 'import time; time.sleep(' + secs + ')');
-            continue;
-        }
-
-        // 结束
-        if (stripped === '结束') {
-            pyLines.push(currentIndent + 'break');
-            continue;
-        }
-    }
-
-    return pyLines.join('\n');
-}
-
-// ========== Pyodide 初始化 ==========
-let pyodide = null;
-let pyodideReady = false;
-
-async function initPyodide() {
-    if (pyodideReady) return;
-
-    let outputDiv = document.getElementById('output');
-    outputDiv.innerHTML = '<span class="loading">正在加载 Python 运行环境（首次约需10秒，之后无需等待）...</span>';
-
-    try {
-        let script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js';
-        document.head.appendChild(script);
-
-        await new Promise((resolve) => { script.onload = resolve; });
-        pyodide = await loadPyodide();
-        pyodideReady = true;
-        outputDiv.innerHTML = '<span class="loading">Python 运行环境加载完成！请点“运行”开始。</span>';
-        document.getElementById('runBtn').disabled = false;
-    } catch (e) {
-        outputDiv.innerHTML = '<span class="error">运行环境加载失败，请刷新重试：' + e.message + '</span>';
-    }
-}
-
-// ========== 运行代码 ==========
-async function runCode() {
-    let outputDiv = document.getElementById('output');
-    let runBtn = document.getElementById('runBtn');
-    let jianCode = document.getElementById('jianCode').value;
-
-    if (!pyodideReady) {
-        await initPyodide();
-        if (!pyodideReady) return;
-    }
-
-    let pyCode = translate(jianCode);
-
-    outputDiv.innerHTML = '<span class="output-label">--- 生成的 Python 代码 ---</span>\n' + pyCode + '\n\n';
-    outputDiv.innerHTML += '<span class="output-label">--- 运行结果 ---</span>\n';
-
-    // --- 核心：通过回调捕获输出，不破坏内部I/O流 ---
-    let stdoutText = "";
-
-    function stdoutCallback(text) {
-        stdoutText += text + "\n";
-    }
-
-    function stdinCallback() {
-        return window.prompt() || "";
-    }
-
-    try {
-        // 设置自定义标准输出
-        pyodide.setStdout({ batched: stdoutCallback });
-        // 设置自定义标准输入
-        pyodide.setStdin({ stdin: stdinCallback });
-
-        await pyodide.runPythonAsync(pyCode);
-
-        // 恢复默认设置
-        pyodide.setStdout();
-        pyodide.setStderr();
-
-        outputDiv.innerHTML += stdoutText || '（程序运行完毕，无输出内容）';
-    } catch (e) {
-        // 出错时也恢复默认
-        pyodide.setStdout();
-        pyodide.setStderr();
-
-        outputDiv.innerHTML += '<span class="error">\n运行出错：' + e.message + '</span>';
-    } finally {
-        runBtn.disabled = false;
-    }
-}
-
-// ========== 示例库 ==========
-const examples = {
-    bmi: `问 "你的身高是多少米？", 得到 [身高]
+    <script>
+        const examples = [
+            `问 "你的身高是多少米？", 得到 [身高]
 问 "你的体重是多少公斤？", 得到 [体重]
 设定 [bmi] 为 [体重] / ([身高] * [身高])
 说 "你的 BMI 指数是：" + [bmi]
@@ -288,67 +86,288 @@ const examples = {
     说 "有点偏重了，注意饮食哦。"
 都不是：
     说 "属于肥胖范围，建议咨询医生。"`,
-    rollcall: `设定 [名单] 为 ["小明", "小红", "小刚", "小丽", "小军"]
-从 [名单] 里随机选一个，得到 [被点名的人]
+            `设定 [名单] 为 ["小明", "小红", "小刚", "小丽", "小军"]
+从 [名单] 里随机选一个, 得到 [被点名的人]
 说 "恭喜 " + [被点名的人] + " 被选中了！"`,
-    password: `设定 [正确密码] 为 "1234"
-说 "请输入密码："
-问 ""，得到 [输入]
-当 [输入] ≠ [正确密码] 时，提示：
-    说 "密码错误，请重试。"
-    说 "再试一次："
-    问 ""，得到 [输入]
-说 "验证通过，门已开启。"`,
-    countdown: `设定 [秒数] 为 5
-当 [秒数] > 0 时，一直：
-    说 "还剩 " + [秒数] + " 秒"
-    等 1 秒
-    设定 [秒数] 为 [秒数] - 1
+            `设定 [正确密码] 为 "1234"
+问 "请输入密码：", 得到 [输入]
+如果 [输入] = [正确密码]：
+    说 "密码正确，门开了！"
+都不是：
+    说 "密码错误！"`,
+            `说 "倒计时开始！"
+重复 5 次：
+    说 6 - 计数
 说 "时间到！"`,
-    weather: `问 "今天气温多少度？", 得到 [温度]
+            `问 "今天气温多少度？", 得到 [温度]
 如果 [温度] < 10：
     说 "太冷了，穿羽绒服吧。"
 再如果 [温度] < 20：
     说 "有点凉，穿件外套。"
-再如果 [温度] < 28：
-    说 "天气舒适，穿长袖或薄衫就好。"
 都不是：
-    说 "热了，短袖走起！"`,
-    change: `问 "商品总价是多少？", 得到 [总价]
-问 "你给了多少钱？", 得到 [付款]
-如果 [付款] < [总价]：
-    说 "钱不够，还差 " + ([总价] - [付款]) + " 元。"
-再如果 [付款] = [总价]：
-    说 "刚好，不用找零。"
-都不是：
-    设定 [找零] 为 [付款] - [总价]
-    说 "应找 " + [找零] + " 元。"
-    如果 [找零] >= 50：
-        说 "找零金额较大，请核对。"`,
-    lottery: `设定 [奖品池] 为 ["手机", "耳机", "谢谢参与", "优惠券", "平板"]
-从 [奖品池] 里随机选一个，得到 [奖品]
-说 "恭喜你抽中了：" + [奖品]
-如果 [奖品] = "谢谢参与"：
-    说 "别灰心，再试一次吧！"
-都不是：
-    说 "请到服务台领取奖品。"`,
-    homework: `问 "明天星期几？", 得到 [星期]
+    说 "天气不错！"`,
+            `问 "总价多少？", 得到 [总价]
+问 "付款多少？", 得到 [付款]
+设定 [找零] 为 [付款] - [总价]
+说 "找零：" + [找零]`,
+            `从 ["一等奖","二等奖","三等奖","谢谢参与"] 里随机选一个, 得到 [结果]
+说 "您抽中了：" + [结果]`,
+            `问 "明天星期几？", 得到 [星期]
 如果 [星期] = "六"：
-    说 "明天是周六，可以睡懒觉！"
-再如果 [星期] = "日"：
-    说 "明天是周日，检查作业做完了吗？"
+    说 "周六，可以睡懒觉！"
 都不是：
-    说 "明天要上学，今晚早点睡，定好闹钟。"`
-};
+    说 "工作日，加油！"`
+        ];
 
-function loadExample(name) {
-    document.getElementById('jianCode').value = examples[name];
-}
+        function loadExample(i) {
+            document.querySelectorAll('.example-btn').forEach(function(btn, idx) {
+                btn.classList.toggle('active', idx === i);
+            });
+            document.getElementById('codeInput').value = examples[i];
+        }
 
-// ========== 页面加载时初始化 ==========
-window.addEventListener('load', () => {
-    initPyodide();
-});
-</script>
+        function translate(code) {
+            const lines = code.split('\n');
+            const js = [];
+            let indent = 0;
+            const warnings = [];
+
+            function I() {
+                return '    '.repeat(indent);
+            }
+
+            for (let rawLine of lines) {
+                const line = rawLine.trimEnd();
+                if (!line.trim()) {
+                    js.push('');
+                    continue;
+                }
+
+                let t = line.trim();
+                const hadColon = t.endsWith('：');
+                if (t.endsWith('：')) {
+                    t = t.slice(0, -1);
+                }
+
+                // 语法检查
+                if ((t.startsWith('如果 ') || t.startsWith('再如果 ')) && !hadColon) {
+                    warnings.push('⚠️ 第' + (lines.indexOf(rawLine) + 1) + '行：\'如果\' 语句后可能缺少冒号 \'：\'');
+                }
+                if (t.startsWith('说 ') && t.length <= 2) {
+                    warnings.push('⚠️ 第' + (lines.indexOf(rawLine) + 1) + '行：\'说\' 后面需要跟内容');
+                }
+
+                // 注释
+                if (t.startsWith('注：') || t.startsWith('注:')) {
+                    js.push(I() + '// ' + t.replace(/^注[：:]/, '').trim());
+                    continue;
+                }
+
+                // 当...时，一直：
+                if (t.startsWith('当 ') && t.includes('时，一直')) {
+                    let cond = t.split('时，一直')[0].substring(2).trim();
+                    cond = cond.replace(/\[(.*?)\]/g, '$1').replace(/\s=\s/g, ' === ');
+                    js.push(I() + 'while (' + cond + ') {');
+                    indent++;
+                    continue;
+                }
+
+                // 重复 N 次：
+                if (t.startsWith('重复 ') && t.includes('次')) {
+                    const match = t.match(/重复\s+(\d+)\s*次/);
+                    if (match) {
+                        js.push(I() + 'for (let 计数 = 1; 计数 <= ' + match[1] + '; 计数++) {');
+                        indent++;
+                    }
+                    continue;
+                }
+
+                // 从 [列表] 里随机选一个, 得到 [变量]
+                if (t.startsWith('从 ') && t.includes('里随机选一个')) {
+                    const 里Pos = t.indexOf('里随机选一个');
+                    let 列表 = t.substring(2, 里Pos).trim();
+                    列表 = 列表.replace(/[\[\]]/g, '');
+                    const 得到Pos = t.indexOf('得到');
+                    let targetVar = t.substring(得到Pos + 2).trim();
+                    targetVar = targetVar.replace(/[\[\]]/g, '');
+                    js.push(I() + targetVar + ' = ' + 列表 + '[Math.floor(Math.random() * ' + 列表 + '.length)];');
+                    continue;
+                }
+
+                // 说 ...
+                if (t.startsWith('说 ')) {
+                    let content = t.substring(2).replace(/\[(.*?)\]/g, '$1');
+                    js.push(I() + 'console.log(' + content + ');');
+                    continue;
+                }
+
+                // 问 "...", 得到 [变量]
+                if (t.startsWith('问 ')) {
+                    const firstQuote = t.indexOf('"');
+                    const lastQuote = t.lastIndexOf('"');
+                    const 得到Pos = t.indexOf('得到');
+                    if (firstQuote > 0 && lastQuote > firstQuote && 得到Pos > 0) {
+                        const promptText = t.substring(firstQuote + 1, lastQuote);
+                        let varName = t.substring(得到Pos + 2).trim();
+                        varName = varName.replace(/[\[\]]/g, '');
+                        js.push(I() + varName + ' = prompt("' + promptText + '");');
+                        js.push(I() + 'if (!isNaN(' + varName + ') && ' + varName + '.trim() !== "") ' + varName + ' = Number(' + varName + ');');
+                    }
+                    continue;
+                }
+
+                // 设定 [变量] 为 ...
+                if (t.startsWith('设定 ')) {
+                    const match = t.match(/设定\s*\[(.*?)\]\s*为\s*(.+)/);
+                    if (match) {
+                        const varName = match[1];
+                        let expr = match[2].trim();
+                        if (!(expr.startsWith('[') && expr.endsWith(']') && expr.includes(','))) {
+                            expr = expr.replace(/\[(.*?)\]/g, '$1');
+                        }
+                        js.push(I() + varName + ' = ' + expr + ';');
+                    }
+                    continue;
+                }
+
+                // 都不是：
+                if (t === '都不是' || t === '否则') {
+                    indent--;
+                    js.push(I() + '} else {');
+                    indent++;
+                    continue;
+                }
+
+                // 再如果 条件：
+                if (t.startsWith('再如果 ')) {
+                    indent--;
+                    let cond = t.substring(4).replace(/\[(.*?)\]/g, '$1').replace(/\s=\s/g, ' === ');
+                    js.push(I() + '} else if (' + cond + ') {');
+                    indent++;
+                    continue;
+                }
+
+                // 如果 条件：
+                if (t.startsWith('如果 ')) {
+                    let cond = t.substring(3).replace(/\[(.*?)\]/g, '$1').replace(/\s=\s/g, ' === ');
+                    js.push(I() + 'if (' + cond + ') {');
+                    indent++;
+                    continue;
+                }
+            }
+
+            while (indent > 0) {
+                indent--;
+                js.push(I() + '}');
+            }
+
+            return { code: js.join('\n'), warnings: warnings };
+        }
+
+        function runCode() {
+            const code = document.getElementById('codeInput').value;
+            const resultArea = document.getElementById('resultArea');
+            const debugBox = document.getElementById('debugBox');
+            const runBtn = document.getElementById('runBtn');
+
+            resultArea.innerHTML = '';
+            debugBox.style.display = 'none';
+
+            // 显示加载状态
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'result-item';
+            loadingDiv.style.textAlign = 'center';
+            loadingDiv.style.color = '#667eea';
+            loadingDiv.style.borderLeftColor = '#667eea';
+            loadingDiv.innerHTML = '<span class="loading-spinner"></span> 正在执行...';
+            resultArea.appendChild(loadingDiv);
+
+            runBtn.disabled = true;
+            runBtn.innerHTML = '<span class="loading-spinner"></span> 运行中...';
+
+            const logs = [];
+            const originalLog = console.log;
+            console.log = function() {
+                logs.push(Array.prototype.slice.call(arguments).join(' '));
+            };
+
+            setTimeout(function() {
+                let jsCode = '';
+                let warnings = [];
+                try {
+                    const result = translate(code);
+                    jsCode = result.code;
+                    warnings = result.warnings;
+                    debugBox.style.display = 'block';
+                    debugBox.textContent = '--- 生成的 JavaScript 代码 ---\n' + jsCode;
+                    new Function(jsCode)();
+                    if (logs.length === 0) logs.push('（程序运行完毕，无输出内容）');
+                } catch (e) {
+                    logs.push({ type: 'error', content: '❌ 运行出错：' + e.message });
+                    if (jsCode) {
+                        debugBox.style.display = 'block';
+                        debugBox.textContent = '--- 出错的 JavaScript 代码 ---\n' + jsCode;
+                    }
+                }
+
+                console.log = originalLog;
+                resultArea.innerHTML = '';
+
+                warnings.forEach(function(w) {
+                    const div = document.createElement('div');
+                    div.className = 'result-item';
+                    div.style.borderLeftColor = '#f6ad55';
+                    div.style.backgroundColor = '#fffaf0';
+                    div.textContent = w;
+                    resultArea.appendChild(div);
+                });
+
+                logs.forEach(function(log) {
+                    const div = document.createElement('div');
+                    if (typeof log === 'object' && log.type === 'error') {
+                        div.className = 'result-item result-error';
+                        div.textContent = log.content;
+                    } else {
+                        div.className = 'result-item';
+                        div.textContent = log;
+                    }
+                    div.oncontextmenu = function(e) {
+                        e.preventDefault();
+                        currentContextTarget = div;
+                        const ctxMenu = document.getElementById('contextMenu');
+                        ctxMenu.style.display = 'block';
+                        ctxMenu.style.left = e.clientX + 'px';
+                        ctxMenu.style.top = e.clientY + 'px';
+                    };
+                    resultArea.appendChild(div);
+                });
+
+                runBtn.disabled = false;
+                runBtn.innerHTML = '▶ 运行代码';
+            }, 50);
+        }
+
+        let currentContextTarget = null;
+
+        function copyResultItem() {
+            if (currentContextTarget) {
+                navigator.clipboard.writeText(currentContextTarget.textContent);
+            }
+            document.getElementById('contextMenu').style.display = 'none';
+        }
+
+        function clearResults() {
+            document.getElementById('resultArea').innerHTML = '<div class="result-welcome">点击运行代码查看结果</div>';
+            document.getElementById('contextMenu').style.display = 'none';
+        }
+
+        document.addEventListener('click', function() {
+            document.getElementById('contextMenu').style.display = 'none';
+        });
+
+        window.addEventListener('load', function() {
+            loadExample(0);
+        });
+    </script>
 </body>
 </html>
