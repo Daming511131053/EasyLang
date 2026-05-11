@@ -52,7 +52,7 @@
                 <button class="example-btn" onclick="loadExample(6)">抽奖转盘</button>
                 <button class="example-btn" onclick="loadExample(7)">作业提醒</button>
             </div>
-            <button class="btn-run" id="runBtn" onclick="runCode()">▶ 运行代码</button>
+            <button class="btn-run" id="runBtn">▶ 运行代码</button>
         </div>
         <div class="result-section">
             <div class="section-title">📋 运行结果</div>
@@ -104,19 +104,35 @@
     说 "太冷了，穿羽绒服吧。"
 再如果 [温度] < 20：
     说 "有点凉，穿件外套。"
+再如果 [温度] < 28：
+    说 "天气舒适，穿长袖或薄衫就好。"
 都不是：
-    说 "天气不错！"`,
-            `问 "总价多少？", 得到 [总价]
-问 "付款多少？", 得到 [付款]
-设定 [找零] 为 [付款] - [总价]
-说 "找零：" + [找零]`,
-            `从 ["一等奖","二等奖","三等奖","谢谢参与"] 里随机选一个, 得到 [结果]
-说 "您抽中了：" + [结果]`,
+    说 "热了，短袖走起！"`,
+            `问 "商品总价是多少？", 得到 [总价]
+问 "你给了多少钱？", 得到 [付款]
+如果 [付款] < [总价]：
+    说 "钱不够，还差 " + ([总价] - [付款]) + " 元。"
+再如果 [付款] = [总价]：
+    说 "刚好，不用找零。"
+都不是：
+    设定 [找零] 为 [付款] - [总价]
+    说 "应找 " + [找零] + " 元。"
+    如果 [找零] >= 50：
+        说 "找零金额较大，请核对。"`,
+            `设定 [奖品池] 为 ["手机", "耳机", "谢谢参与", "优惠券", "平板"]
+从 [奖品池] 里随机选一个, 得到 [奖品]
+说 "恭喜你抽中了：" + [奖品]
+如果 [奖品] = "谢谢参与"：
+    说 "别灰心，再试一次吧！"
+都不是：
+    说 "请到服务台领取奖品。"`,
             `问 "明天星期几？", 得到 [星期]
 如果 [星期] = "六"：
-    说 "周六，可以睡懒觉！"
+    说 "明天是周六，可以睡懒觉！"
+再如果 [星期] = "日"：
+    说 "明天是周日，检查作业做完了吗？"
 都不是：
-    说 "工作日，加油！"`
+    说 "明天要上学，今晚早点睡，定好闹钟。"`
         ];
 
         function loadExample(i) {
@@ -264,7 +280,7 @@
             return { code: js.join('\n'), warnings: warnings };
         }
 
-        function runCode() {
+        function runCode(showDebug) {
             const code = document.getElementById('codeInput').value;
             const resultArea = document.getElementById('resultArea');
             const debugBox = document.getElementById('debugBox');
@@ -298,18 +314,19 @@
                     const result = translate(code);
                     jsCode = result.code;
                     warnings = result.warnings;
-                    debugBox.style.display = 'block';
-                    debugBox.textContent = '--- 生成的 JavaScript 代码 ---\n' + jsCode;
+                    if (showDebug) {
+                        debugBox.style.display = 'block';
+                        debugBox.textContent = '--- 生成的 JavaScript 代码 ---\n' + jsCode;
+                    }
                     new Function(jsCode)();
                     if (logs.length === 0) logs.push('（程序运行完毕，无输出内容）');
                 } catch (e) {
                     logs.push({ type: 'error', content: '❌ 运行出错：' + e.message });
-                    if (jsCode) {
+                    if (jsCode && showDebug) {
                         debugBox.style.display = 'block';
                         debugBox.textContent = '--- 出错的 JavaScript 代码 ---\n' + jsCode;
                     }
                 }
-
                 console.log = originalLog;
                 resultArea.innerHTML = '';
 
@@ -363,6 +380,11 @@
 
         document.addEventListener('click', function() {
             document.getElementById('contextMenu').style.display = 'none';
+        });
+
+        document.getElementById('runBtn').addEventListener('click', function(e) {
+            const showDebug = e.ctrlKey;
+            runCode(showDebug);
         });
 
         window.addEventListener('load', function() {
