@@ -3,23 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>简语 IDE</title>
+    <title>简语 IDE · AI 对话式编程</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Microsoft YaHei', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; flex-direction: column; }
-        header { background: white; padding: 12px 20px; }
+        header { background: white; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
         h1 { color: #667eea; font-size: 22px; }
+        .config-area { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .config-area input { padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; }
+        .config-area input.model-input { width: 160px; }
+        .config-area input.key-input { width: 200px; }
+        .config-btn { padding: 6px 14px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; white-space: nowrap; }
         .main-container { flex: 1; display: flex; padding: 15px; gap: 15px; }
         .editor-section, .result-section { flex: 1; display: flex; flex-direction: column; background: white; border-radius: 12px; overflow: hidden; }
         .section-title { background: linear-gradient(90deg, #667eea, #764ba2); color: white; padding: 10px 16px; font-size: 14px; }
+        .ai-chat-box { padding: 10px; background: #f8f9ff; border-bottom: 1px solid #e0e0ff; display: flex; gap: 8px; }
+        .ai-chat-box input { flex: 1; padding: 8px 12px; border: 1px solid #d0d0ff; border-radius: 20px; font-size: 13px; outline: none; }
+        .ai-chat-box input:focus { border-color: #667eea; }
+        .ai-chat-box button { padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 13px; white-space: nowrap; }
+        .ai-chat-box button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .ai-status { padding: 4px 10px; font-size: 11px; color: #888; text-align: center; min-height: 20px; }
         textarea { flex: 1; border: none; resize: none; padding: 15px; font-size: 14px; font-family: monospace; outline: none; background: #fafafa; }
-        .debug-box { margin: 10px; padding: 10px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; max-height: 150px; overflow: auto; white-space: pre-wrap; }
+        .debug-box { margin: 10px; padding: 10px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; max-height: 150px; overflow: auto; white-space: pre-wrap; display: none; }
         .examples-bar { background: #f5f5f5; padding: 10px; display: flex; gap: 6px; flex-wrap: wrap; border-top: 1px solid #eee; }
         .example-btn { padding: 5px 12px; background: white; border: 2px solid #ddd; border-radius: 15px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
-        .example-btn:hover { background: #667eea; color: white; border-color: #667eea; }
-        .example-btn.active { background: #667eea; color: white; border-color: #667eea; }
-        .btn-run { margin: 10px; padding: 10px; background: linear-gradient(90deg, #667eea, #764ba2); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; transition: opacity 0.2s; }
-        .btn-run:hover { opacity: 0.9; }
+        .example-btn:hover, .example-btn.active { background: #667eea; color: white; border-color: #667eea; }
+        .btn-run { margin: 10px; padding: 10px; background: linear-gradient(90deg, #667eea, #764ba2); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; }
         .btn-run:disabled { opacity: 0.6; cursor: not-allowed; }
         .loading-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: middle; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -30,17 +39,27 @@
         .context-menu { position: fixed; background: white; border: 1px solid #ddd; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; min-width: 120px; display: none; }
         .context-menu-item { padding: 8px 16px; cursor: pointer; font-size: 13px; }
         .context-menu-item:hover { background: #f5f5f5; }
-        @media (max-width: 768px) { .main-container { flex-direction: column; } }
+        @media (max-width: 768px) { .main-container { flex-direction: column; } header { flex-direction: column; } }
     </style>
 </head>
 <body>
     <header>
-        <h1>简语 IDE</h1>
+        <h1>简语 IDE · AI 对话式编程</h1>
+        <div class="config-area">
+            <input class="model-input" id="modelInput" placeholder="模型名（如 gpt-4o）">
+            <input class="key-input" type="password" id="apiKeyInput" placeholder="API Key">
+            <button class="config-btn" onclick="saveConfig()">保存配置</button>
+        </div>
     </header>
 
     <div class="main-container">
         <div class="editor-section">
             <div class="section-title">📝 代码输入</div>
+            <div class="ai-chat-box">
+                <input type="text" id="aiInput" placeholder="对 AI 说：帮我写一个猜数字游戏..." onkeydown="if(event.key==='Enter')askAI()">
+                <button id="aiBtn" onclick="askAI()">✨ 生成代码</button>
+            </div>
+            <div class="ai-status" id="aiStatus">💡 填写模型名和 Key 并保存，即可用自然语言生成代码</div>
             <textarea id="codeInput" placeholder="在这里输入简语代码..."></textarea>
             <div class="examples-bar">
                 <button class="example-btn" onclick="loadExample(0)">BMI计算器</button>
@@ -56,7 +75,7 @@
         </div>
         <div class="result-section">
             <div class="section-title">📋 运行结果</div>
-            <div id="debugBox" class="debug-box" style="display:none;"></div>
+            <div id="debugBox" class="debug-box"></div>
             <div id="resultArea" class="result-content">
                 <div class="result-welcome">点击运行代码查看结果</div>
             </div>
@@ -64,7 +83,7 @@
     </div>
 
     <footer style="text-align: center; padding: 12px; color: rgba(255,255,255,0.7); font-size: 13px;">
-        简语 V1.0 · 写中文就能编程
+        简语 V1.1 · AI 对话式编程 · 写中文就能编程
     </footer>
 
     <div id="contextMenu" class="context-menu">
@@ -73,323 +92,209 @@
     </div>
 
     <script>
+        // ========== 配置（用户自定义） ==========
+        const API_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
+
+        let apiKey = localStorage.getItem('easylang_api_key') || '';
+        let model = localStorage.getItem('easylang_model') || '';
+
+        if (apiKey) document.getElementById('apiKeyInput').value = apiKey;
+        if (model) document.getElementById('modelInput').value = model;
+        updateStatus();
+
+        function saveConfig() {
+            apiKey = document.getElementById('apiKeyInput').value.trim();
+            model = document.getElementById('modelInput').value.trim();
+
+            if (apiKey) localStorage.setItem('easylang_api_key', apiKey);
+            else localStorage.removeItem('easylang_api_key');
+
+            if (model) localStorage.setItem('easylang_model', model);
+            else localStorage.removeItem('easylang_model');
+
+            updateStatus();
+        }
+
+        function updateStatus() {
+            const s = document.getElementById('aiStatus');
+            if (apiKey && model) s.textContent = '✅ 已配置：' + model + ' | 可直接使用 AI 生成代码';
+            else if (apiKey) s.textContent = '⚠️ 已填写 Key，请填写模型名称（如 gpt-4o、deepseek-chat）';
+            else s.textContent = '💡 请填写模型名和 API Key，点击保存配置';
+        }
+
+        // ========== 示例库 ==========
         const examples = [
-            `问 "你的身高是多少米？", 得到 [身高]
-问 "你的体重是多少公斤？", 得到 [体重]
-设定 [bmi] 为 [体重] / ([身高] * [身高])
-说 "你的 BMI 指数是：" + [bmi]
-如果 [bmi] < 18.5：
-    说 "体重过轻，多吃点好东西吧。"
-再如果 [bmi] < 24：
-    说 "体重正常，保持得不错！"
-再如果 [bmi] < 28：
-    说 "有点偏重了，注意饮食哦。"
-都不是：
-    说 "属于肥胖范围，建议咨询医生。"`,
-            `设定 [名单] 为 ["小明", "小红", "小刚", "小丽", "小军"]
-从 [名单] 里随机选一个, 得到 [被点名的人]
-说 "恭喜 " + [被点名的人] + " 被选中了！"`,
-            `设定 [正确密码] 为 "1234"
-问 "请输入密码：", 得到 [输入]
-如果 [输入] = [正确密码]：
-    说 "密码正确，门开了！"
-都不是：
-    说 "密码错误！"`,
-            `说 "倒计时开始！"
-重复 5 次：
-    说 6 - 计数
-说 "时间到！"`,
-            `问 "今天气温多少度？", 得到 [温度]
-如果 [温度] < 10：
-    说 "太冷了，穿羽绒服吧。"
-再如果 [温度] < 20：
-    说 "有点凉，穿件外套。"
-再如果 [温度] < 28：
-    说 "天气舒适，穿长袖或薄衫就好。"
-都不是：
-    说 "热了，短袖走起！"`,
-            `问 "商品总价是多少？", 得到 [总价]
-问 "你给了多少钱？", 得到 [付款]
-如果 [付款] < [总价]：
-    说 "钱不够，还差 " + ([总价] - [付款]) + " 元。"
-再如果 [付款] = [总价]：
-    说 "刚好，不用找零。"
-都不是：
-    设定 [找零] 为 [付款] - [总价]
-    说 "应找 " + [找零] + " 元。"
-    如果 [找零] >= 50：
-        说 "找零金额较大，请核对。"`,
-            `设定 [奖品池] 为 ["手机", "耳机", "谢谢参与", "优惠券", "平板"]
-从 [奖品池] 里随机选一个, 得到 [奖品]
-说 "恭喜你抽中了：" + [奖品]
-如果 [奖品] = "谢谢参与"：
-    说 "别灰心，再试一次吧！"
-都不是：
-    说 "请到服务台领取奖品。"`,
-            `问 "明天星期几？", 得到 [星期]
-如果 [星期] = "六"：
-    说 "明天是周六，可以睡懒觉！"
-再如果 [星期] = "日"：
-    说 "明天是周日，检查作业做完了吗？"
-都不是：
-    说 "明天要上学，今晚早点睡，定好闹钟。"`
+            `问 "你的身高是多少米？", 得到 [身高]\n问 "你的体重是多少公斤？", 得到 [体重]\n设定 [bmi] 为 [体重] / ([身高] * [身高])\n说 "你的 BMI 指数是：" + [bmi]\n如果 [bmi] < 18.5：\n    说 "体重过轻，多吃点好东西吧。"\n再如果 [bmi] < 24：\n    说 "体重正常，保持得不错！"\n再如果 [bmi] < 28：\n    说 "有点偏重了，注意饮食哦。"\n都不是：\n    说 "属于肥胖范围，建议咨询医生。"`,
+            `设定 [名单] 为 ["小明", "小红", "小刚", "小丽", "小军"]\n从 [名单] 里随机选一个, 得到 [被点名的人]\n说 "恭喜 " + [被点名的人] + " 被选中了！"`,
+            `设定 [正确密码] 为 "1234"\n问 "请输入密码：", 得到 [输入]\n如果 [输入] = [正确密码]：\n    说 "密码正确，门开了！"\n都不是：\n    说 "密码错误！"`,
+            `说 "倒计时开始！"\n重复 5 次：\n    说 6 - 计数\n说 "时间到！"`,
+            `问 "今天气温多少度？", 得到 [温度]\n如果 [温度] < 10：\n    说 "太冷了，穿羽绒服吧。"\n再如果 [温度] < 20：\n    说 "有点凉，穿件外套。"\n再如果 [温度] < 28：\n    说 "天气舒适，穿长袖或薄衫就好。"\n都不是：\n    说 "热了，短袖走起！"`,
+            `问 "商品总价是多少？", 得到 [总价]\n问 "你给了多少钱？", 得到 [付款]\n如果 [付款] < [总价]：\n    说 "钱不够，还差 " + ([总价] - [付款]) + " 元。"\n再如果 [付款] = [总价]：\n    说 "刚好，不用找零。"\n都不是：\n    设定 [找零] 为 [付款] - [总价]\n    说 "应找 " + [找零] + " 元。"\n    如果 [找零] >= 50：\n        说 "找零金额较大，请核对。"`,
+            `设定 [奖品池] 为 ["手机", "耳机", "谢谢参与", "优惠券", "平板"]\n从 [奖品池] 里随机选一个, 得到 [奖品]\n说 "恭喜你抽中了：" + [奖品]\n如果 [奖品] = "谢谢参与"：\n    说 "别灰心，再试一次吧！"\n都不是：\n    说 "请到服务台领取奖品。"`,
+            `问 "明天星期几？", 得到 [星期]\n如果 [星期] = "六"：\n    说 "明天是周六，可以睡懒觉！"\n再如果 [星期] = "日"：\n    说 "明天是周日，检查作业做完了吗？"\n都不是：\n    说 "明天要上学，今晚早点睡，定好闹钟。"`
         ];
 
         function loadExample(i) {
-            document.querySelectorAll('.example-btn').forEach(function(btn, idx) {
-                btn.classList.toggle('active', idx === i);
-            });
+            document.querySelectorAll('.example-btn').forEach((btn, idx) => btn.classList.toggle('active', idx === i));
             document.getElementById('codeInput').value = examples[i];
         }
 
-        function translate(code) {
-            const lines = code.split('\n');
-            const js = [];
-            let indent = 0;
-            const warnings = [];
+        // ========== AI 生成代码 ==========
+        async function askAI() {
+            const input = document.getElementById('aiInput');
+            const btn = document.getElementById('aiBtn');
+            const status = document.getElementById('aiStatus');
+            const query = input.value.trim();
 
-            function I() {
-                return '    '.repeat(indent);
+            if (!query) { status.textContent = '⚠️ 请输入需求描述'; return; }
+            if (!apiKey || !model) { status.textContent = '⚠️ 请先在右上角填写模型名和 API Key 并保存'; return; }
+
+            btn.disabled = input.disabled = true;
+            status.innerHTML = '<span class="loading-spinner"></span> 正在通过 ' + model + ' 生成代码...';
+
+            try {
+                const res = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+                    body: JSON.stringify({
+                        model: model,
+                        temperature: 0.3,
+                        max_tokens: 2000,
+                        messages: [
+                            { role: 'system', content: `你是简语代码生成器。只输出简语代码，不要任何解释、不要代码块标记。语法：\n- 输出：说 "内容"\n- 输入：问 "提示", 得到 [变量]\n- 赋值：设定 [变量] 为 值\n- 条件：如果 条件：/ 再如果 条件：/ 都不是：\n- 固定循环：重复 次数 次：\n- 条件循环：当 条件 时，一直：\n- 随机：从 [列表] 里随机选一个, 得到 [变量]\n- 数组：["元素1","元素2"]\n变量用方括号，文字用双引号，条件冒号用中文：` },
+                            { role: 'user', content: query }
+                        ]
+                    })
+                });
+
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.error?.message || 'HTTP ' + res.status);
+                }
+
+                const data = await res.json();
+                if (data.error) throw new Error(data.error.message);
+
+                const raw = data.choices[0].message.content.trim();
+                document.getElementById('codeInput').value = raw.replace(/```/g, '');
+
+                status.textContent = '✅ 代码已生成，点击"运行代码"查看效果';
+            } catch (e) {
+                status.textContent = '❌ 生成失败：' + e.message;
+            } finally {
+                btn.disabled = input.disabled = false;
+                input.focus();
             }
-
-            for (let rawLine of lines) {
-                const line = rawLine.trimEnd();
-                if (!line.trim()) {
-                    js.push('');
-                    continue;
-                }
-
-                let t = line.trim();
-                const hadColon = t.endsWith('：');
-                if (t.endsWith('：')) {
-                    t = t.slice(0, -1);
-                }
-
-                // 语法检查
-                if ((t.startsWith('如果 ') || t.startsWith('再如果 ')) && !hadColon) {
-                    warnings.push('⚠️ 第' + (lines.indexOf(rawLine) + 1) + '行：\'如果\' 语句后可能缺少冒号 \'：\'');
-                }
-                if (t.startsWith('说 ') && t.length <= 2) {
-                    warnings.push('⚠️ 第' + (lines.indexOf(rawLine) + 1) + '行：\'说\' 后面需要跟内容');
-                }
-
-                // 注释
-                if (t.startsWith('注：') || t.startsWith('注:')) {
-                    js.push(I() + '// ' + t.replace(/^注[：:]/, '').trim());
-                    continue;
-                }
-
-                // 当...时，一直：
-                if (t.startsWith('当 ') && t.includes('时，一直')) {
-                    let cond = t.split('时，一直')[0].substring(2).trim();
-                    cond = cond.replace(/\[(.*?)\]/g, '$1').replace(/\s=\s/g, ' === ');
-                    js.push(I() + 'while (' + cond + ') {');
-                    indent++;
-                    continue;
-                }
-
-                // 重复 N 次：
-                if (t.startsWith('重复 ') && t.includes('次')) {
-                    const match = t.match(/重复\s+(\d+)\s*次/);
-                    if (match) {
-                        js.push(I() + 'for (let 计数 = 1; 计数 <= ' + match[1] + '; 计数++) {');
-                        indent++;
-                    }
-                    continue;
-                }
-
-                // 从 [列表] 里随机选一个, 得到 [变量]
-                if (t.startsWith('从 ') && t.includes('里随机选一个')) {
-                    const 里Pos = t.indexOf('里随机选一个');
-                    let 列表 = t.substring(2, 里Pos).trim();
-                    列表 = 列表.replace(/[\[\]]/g, '');
-                    const 得到Pos = t.indexOf('得到');
-                    let targetVar = t.substring(得到Pos + 2).trim();
-                    targetVar = targetVar.replace(/[\[\]]/g, '');
-                    js.push(I() + targetVar + ' = ' + 列表 + '[Math.floor(Math.random() * ' + 列表 + '.length)];');
-                    continue;
-                }
-
-                // 说 ...
-                if (t.startsWith('说 ')) {
-                    let content = t.substring(2).replace(/\[(.*?)\]/g, '$1');
-                    js.push(I() + 'console.log(' + content + ');');
-                    continue;
-                }
-
-                // 问 "...", 得到 [变量]
-                if (t.startsWith('问 ')) {
-                    const firstQuote = t.indexOf('"');
-                    const lastQuote = t.lastIndexOf('"');
-                    const 得到Pos = t.indexOf('得到');
-                    if (firstQuote > 0 && lastQuote > firstQuote && 得到Pos > 0) {
-                        const promptText = t.substring(firstQuote + 1, lastQuote);
-                        let varName = t.substring(得到Pos + 2).trim();
-                        varName = varName.replace(/[\[\]]/g, '');
-                        js.push(I() + varName + ' = prompt("' + promptText + '");');
-                        js.push(I() + 'if (!isNaN(' + varName + ') && ' + varName + '.trim() !== "") ' + varName + ' = Number(' + varName + ');');
-                    }
-                    continue;
-                }
-
-                // 设定 [变量] 为 ...
-                if (t.startsWith('设定 ')) {
-                    const match = t.match(/设定\s*\[(.*?)\]\s*为\s*(.+)/);
-                    if (match) {
-                        const varName = match[1];
-                        let expr = match[2].trim();
-                        if (!(expr.startsWith('[') && expr.endsWith(']') && expr.includes(','))) {
-                            expr = expr.replace(/\[(.*?)\]/g, '$1');
-                        }
-                        js.push(I() + varName + ' = ' + expr + ';');
-                    }
-                    continue;
-                }
-
-                // 都不是：
-                if (t === '都不是' || t === '否则') {
-                    indent--;
-                    js.push(I() + '} else {');
-                    indent++;
-                    continue;
-                }
-
-                // 再如果 条件：
-                if (t.startsWith('再如果 ')) {
-                    indent--;
-                    let cond = t.substring(4).replace(/\[(.*?)\]/g, '$1').replace(/\s=\s/g, ' === ');
-                    js.push(I() + '} else if (' + cond + ') {');
-                    indent++;
-                    continue;
-                }
-
-                // 如果 条件：
-                if (t.startsWith('如果 ')) {
-                    let cond = t.substring(3).replace(/\[(.*?)\]/g, '$1').replace(/\s=\s/g, ' === ');
-                    js.push(I() + 'if (' + cond + ') {');
-                    indent++;
-                    continue;
-                }
-            }
-
-            while (indent > 0) {
-                indent--;
-                js.push(I() + '}');
-            }
-
-            return { code: js.join('\n'), warnings: warnings };
         }
 
+        // ========== 转译器 ==========
+        function translate(code) {
+            const lines = code.split('\n'), js = [], warnings = [];
+            let indent = 0;
+            const I = () => '    '.repeat(indent);
+            for (let rawLine of lines) {
+                const line = rawLine.trimEnd();
+                if (!line.trim()) { js.push(''); continue; }
+                let t = line.trim();
+                const hadColon = t.endsWith('：');
+                if (t.endsWith('：')) t = t.slice(0, -1);
+                if ((t.startsWith('如果 ') || t.startsWith('再如果 ')) && !hadColon) warnings.push('⚠️ 第' + (lines.indexOf(rawLine) + 1) + '行：缺少冒号 \'：\'');
+                if (t.startsWith('注：') || t.startsWith('注:')) { js.push(I() + '// ' + t.replace(/^注[：:]/, '').trim()); continue; }
+                if (t.startsWith('当 ') && t.includes('时，一直')) {
+                    let c = t.split('时，一直')[0].substring(2).trim();
+                    c = c.replace(/\[(.*?)\]/g, '$1').replace(/\s=\s/g, ' === ');
+                    js.push(I() + 'while (' + c + ') {'); indent++; continue;
+                }
+                if (t.startsWith('重复 ') && t.includes('次')) {
+                    const m = t.match(/重复\s+(\d+)\s*次/);
+                    if (m) { js.push(I() + 'for (let 计数=1; 计数<=' + m[1] + '; 计数++) {'); indent++; }
+                    continue;
+                }
+                if (t.startsWith('从 ') && t.includes('里随机选一个')) {
+                    const lp = t.indexOf('里随机选一个');
+                    let list = t.substring(2, lp).trim().replace(/[\[\]]/g, '');
+                    const gp = t.indexOf('得到');
+                    let v = t.substring(gp + 2).trim().replace(/[\[\]]/g, '');
+                    js.push(I() + v + ' = ' + list + '[Math.floor(Math.random()*' + list + '.length)];');
+                    continue;
+                }
+                if (t.startsWith('说 ')) { js.push(I() + 'console.log(' + t.substring(2).replace(/\[(.*?)\]/g, '$1') + ');'); continue; }
+                if (t.startsWith('问 ')) {
+                    const fq = t.indexOf('"'), lq = t.lastIndexOf('"'), gp = t.indexOf('得到');
+                    if (fq > 0 && lq > fq && gp > 0) {
+                        const p = t.substring(fq + 1, lq);
+                        let v = t.substring(gp + 2).trim().replace(/[\[\]]/g, '');
+                        js.push(I() + v + ' = prompt("' + p + '");');
+                        js.push(I() + 'if(!isNaN(' + v + ')&&' + v + '.trim()!=="")' + v + '=Number(' + v + ');');
+                    }
+                    continue;
+                }
+                if (t.startsWith('设定 ')) {
+                    const m = t.match(/设定\s*\[(.*?)\]\s*为\s*(.+)/);
+                    if (m) {
+                        let e = m[2].trim();
+                        if (!(e.startsWith('[') && e.endsWith(']') && e.includes(','))) e = e.replace(/\[(.*?)\]/g, '$1');
+                        js.push(I() + m[1] + ' = ' + e + ';');
+                    }
+                    continue;
+                }
+                if (t === '都不是' || t === '否则') { indent--; js.push(I() + '} else {'); indent++; continue; }
+                if (t.startsWith('再如果 ')) {
+                    indent--;
+                    js.push(I() + '} else if (' + t.substring(4).replace(/\[(.*?)\]/g, '$1').replace(/\s=\s/g, ' === ') + ') {');
+                    indent++; continue;
+                }
+                if (t.startsWith('如果 ')) {
+                    js.push(I() + 'if (' + t.substring(3).replace(/\[(.*?)\]/g, '$1').replace(/\s=\s/g, ' === ') + ') {');
+                    indent++; continue;
+                }
+                if (t.startsWith('等 ') && t.endsWith('秒')) { js.push(I() + 'const _s=Date.now();while(Date.now()-_s<' + t.substring(2, t.length - 1) + '*1000){}'); continue; }
+                if (t === '结束') { js.push(I() + 'break;'); continue; }
+            }
+            while (indent > 0) { indent--; js.push(I() + '}'); }
+            return { code: js.join('\n'), warnings };
+        }
+
+        // ========== 运行 ==========
         function runCode(showDebug) {
             const code = document.getElementById('codeInput').value;
-            const resultArea = document.getElementById('resultArea');
-            const debugBox = document.getElementById('debugBox');
-            const runBtn = document.getElementById('runBtn');
-
-            resultArea.innerHTML = '';
-            debugBox.style.display = 'none';
-
-            // 显示加载状态
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'result-item';
-            loadingDiv.style.textAlign = 'center';
-            loadingDiv.style.color = '#667eea';
-            loadingDiv.style.borderLeftColor = '#667eea';
-            loadingDiv.innerHTML = '<span class="loading-spinner"></span> 正在执行...';
-            resultArea.appendChild(loadingDiv);
-
-            runBtn.disabled = true;
-            runBtn.innerHTML = '<span class="loading-spinner"></span> 运行中...';
-
-            const logs = [];
-            const originalLog = console.log;
-            console.log = function() {
-                logs.push(Array.prototype.slice.call(arguments).join(' '));
-            };
-
-            setTimeout(function() {
-                let jsCode = '';
-                let warnings = [];
+            const ra = document.getElementById('resultArea'), db = document.getElementById('debugBox'), rb = document.getElementById('runBtn');
+            ra.innerHTML = ''; db.style.display = 'none';
+            const ld = document.createElement('div'); ld.className = 'result-item'; ld.style.cssText = 'text-align:center;color:#667eea;border-left-color:#667eea;';
+            ld.innerHTML = '<span class="loading-spinner"></span> 正在执行...'; ra.appendChild(ld);
+            rb.disabled = true; rb.innerHTML = '<span class="loading-spinner"></span> 运行中...';
+            const logs = [], orig = console.log;
+            console.log = function() { logs.push(Array.prototype.slice.call(arguments).join(' ')); };
+            setTimeout(() => {
+                let jsCode = '', warnings = [];
                 try {
-                    const result = translate(code);
-                    jsCode = result.code;
-                    warnings = result.warnings;
-                    if (showDebug) {
-                        debugBox.style.display = 'block';
-                        debugBox.textContent = '--- 生成的 JavaScript 代码 ---\n' + jsCode;
-                    }
+                    const r = translate(code); jsCode = r.code; warnings = r.warnings;
+                    if (showDebug) { db.style.display = 'block'; db.textContent = '--- JS ---\n' + jsCode; }
                     new Function(jsCode)();
-                    if (logs.length === 0) logs.push('（程序运行完毕，无输出内容）');
+                    if (!logs.length) logs.push('（程序运行完毕，无输出内容）');
                 } catch (e) {
                     logs.push({ type: 'error', content: '❌ 运行出错：' + e.message });
-                    if (jsCode && showDebug) {
-                        debugBox.style.display = 'block';
-                        debugBox.textContent = '--- 出错的 JavaScript 代码 ---\n' + jsCode;
-                    }
+                    if (jsCode && showDebug) { db.style.display = 'block'; db.textContent = '--- JS ---\n' + jsCode; }
                 }
-                console.log = originalLog;
-                resultArea.innerHTML = '';
-
-                warnings.forEach(function(w) {
-                    const div = document.createElement('div');
-                    div.className = 'result-item';
-                    div.style.borderLeftColor = '#f6ad55';
-                    div.style.backgroundColor = '#fffaf0';
-                    div.textContent = w;
-                    resultArea.appendChild(div);
+                console.log = orig; ra.innerHTML = '';
+                warnings.forEach(w => { const d = document.createElement('div'); d.className = 'result-item'; d.style.cssText = 'border-left-color:#f6ad55;background:#fffaf0;'; d.textContent = w; ra.appendChild(d); });
+                logs.forEach(l => {
+                    const d = document.createElement('div');
+                    if (typeof l === 'object' && l.type === 'error') { d.className = 'result-item result-error'; d.textContent = l.content; }
+                    else { d.className = 'result-item'; d.textContent = l; }
+                    d.oncontextmenu = function(e) { e.preventDefault(); currentContextTarget = d; const cm = document.getElementById('contextMenu'); cm.style.display = 'block'; cm.style.left = e.clientX + 'px'; cm.style.top = e.clientY + 'px'; };
+                    ra.appendChild(d);
                 });
-
-                logs.forEach(function(log) {
-                    const div = document.createElement('div');
-                    if (typeof log === 'object' && log.type === 'error') {
-                        div.className = 'result-item result-error';
-                        div.textContent = log.content;
-                    } else {
-                        div.className = 'result-item';
-                        div.textContent = log;
-                    }
-                    div.oncontextmenu = function(e) {
-                        e.preventDefault();
-                        currentContextTarget = div;
-                        const ctxMenu = document.getElementById('contextMenu');
-                        ctxMenu.style.display = 'block';
-                        ctxMenu.style.left = e.clientX + 'px';
-                        ctxMenu.style.top = e.clientY + 'px';
-                    };
-                    resultArea.appendChild(div);
-                });
-
-                runBtn.disabled = false;
-                runBtn.innerHTML = '▶ 运行代码';
+                rb.disabled = false; rb.innerHTML = '▶ 运行代码';
             }, 50);
         }
 
         let currentContextTarget = null;
-
-        function copyResultItem() {
-            if (currentContextTarget) {
-                navigator.clipboard.writeText(currentContextTarget.textContent);
-            }
-            document.getElementById('contextMenu').style.display = 'none';
-        }
-
-        function clearResults() {
-            document.getElementById('resultArea').innerHTML = '<div class="result-welcome">点击运行代码查看结果</div>';
-            document.getElementById('contextMenu').style.display = 'none';
-        }
-
-        document.addEventListener('click', function() {
-            document.getElementById('contextMenu').style.display = 'none';
-        });
-
-        document.getElementById('runBtn').addEventListener('click', function(e) {
-            const showDebug = e.ctrlKey;
-            runCode(showDebug);
-        });
-
-        window.addEventListener('load', function() {
-            loadExample(0);
-        });
+        function copyResultItem() { if (currentContextTarget) navigator.clipboard.writeText(currentContextTarget.textContent); document.getElementById('contextMenu').style.display = 'none'; }
+        function clearResults() { document.getElementById('resultArea').innerHTML = '<div class="result-welcome">点击运行代码查看结果</div>'; document.getElementById('contextMenu').style.display = 'none'; }
+        document.addEventListener('click', () => document.getElementById('contextMenu').style.display = 'none');
+        document.getElementById('runBtn').addEventListener('click', e => runCode(e.ctrlKey));
+        window.addEventListener('load', () => loadExample(0));
     </script>
 </body>
 </html>
