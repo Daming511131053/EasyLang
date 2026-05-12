@@ -92,9 +92,18 @@
     </div>
 
     <script>
-        // ========== 配置（用户自定义） ==========
-        const API_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
+        // ========== API 端点映射表 ==========
+        const API_ENDPOINTS = {
+            'deepseek-chat': 'https://api.deepseek.com/v1/chat/completions',
+            'deepseek-reasoner': 'https://api.deepseek.com/v1/chat/completions',
+            'gpt-4o': 'https://api.openai.com/v1/chat/completions',
+            'gpt-4': 'https://api.openai.com/v1/chat/completions',
+            'glm-4': 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+            'qwen-plus': 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+            'moonshot-v1': 'https://api.moonshot.cn/v1/chat/completions'
+        };
 
+        // ========== 配置（用户自定义） ==========
         let apiKey = localStorage.getItem('easylang_api_key') || '';
         let model = localStorage.getItem('easylang_model') || '';
 
@@ -153,7 +162,8 @@
             status.innerHTML = '<span class="loading-spinner"></span> 正在通过 ' + model + ' 生成代码...';
 
             try {
-                const res = await fetch(API_ENDPOINT, {
+                const endpoint = API_ENDPOINTS[model] || 'https://api.openai.com/v1/chat/completions';
+                const res = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
                     body: JSON.stringify({
