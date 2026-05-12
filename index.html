@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>简语 IDE · AI 对话式编程</title>
+    <title>jianyu IDE · AI 对话式编程</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Microsoft YaHei', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; flex-direction: column; }
@@ -44,7 +44,7 @@
 </head>
 <body>
     <header>
-        <h1>简语 IDE · AI 对话式编程</h1>
+        <h1>jianyu IDE · AI 对话式编程</h1>
         <div class="config-area">
             <input class="model-input" id="modelInput" placeholder="模型名（如 gpt-4o）">
             <input class="key-input" type="password" id="apiKeyInput" placeholder="API Key">
@@ -60,7 +60,7 @@
                 <button id="aiBtn" onclick="askAI()">✨ 生成代码</button>
             </div>
             <div class="ai-status" id="aiStatus">💡 填写模型名和 Key 并保存，即可用自然语言生成代码</div>
-            <textarea id="codeInput" placeholder="在这里输入简语代码..."></textarea>
+            <textarea id="codeInput" placeholder="在这里输入jianyu代码..."></textarea>
             <div class="examples-bar">
                 <button class="example-btn" onclick="loadExample(0)">BMI计算器</button>
                 <button class="example-btn" onclick="loadExample(1)">随机点名</button>
@@ -83,7 +83,7 @@
     </div>
 
     <footer style="text-align: center; padding: 12px; color: rgba(255,255,255,0.7); font-size: 13px;">
-        简语 V1.1 · AI 对话式编程 · 写中文就能编程
+        jianyu V1.1 · AI 对话式编程 · 写中文就能编程
     </footer>
 
     <div id="contextMenu" class="context-menu">
@@ -161,7 +161,7 @@
                         temperature: 0.3,
                         max_tokens: 2000,
                         messages: [
-                            { role: 'system', content: `你是简语代码生成器。只输出简语代码，不要任何解释、不要代码块标记。语法：\n- 输出：说 "内容"\n- 输入：问 "提示", 得到 [变量]\n- 赋值：设定 [变量] 为 值\n- 条件：如果 条件：/ 再如果 条件：/ 都不是：\n- 固定循环：重复 次数 次：\n- 条件循环：当 条件 时，一直：\n- 随机：从 [列表] 里随机选一个, 得到 [变量]\n- 数组：["元素1","元素2"]\n变量用方括号，文字用双引号，条件冒号用中文：` },
+                            { role: 'system', content: `你是jianyu代码生成器。只输出jianyu代码，不要任何解释、不要代码块标记。语法：\n- 输出：说 "内容"\n- 输入：问 "提示", 得到 [变量]\n- 赋值：设定 [变量] 为 值\n- 条件：如果 条件：/ 再如果 条件：/ 都不是：\n- 固定循环：重复 次数 次：\n- 条件循环：当 条件 时，一直：\n- 随机：从 [列表] 里随机选一个, 得到 [变量]\n- 数组：["元素1","元素2"]\n变量用方括号，文字用双引号，条件冒号用中文：` },
                             { role: 'user', content: query }
                         ]
                     })
